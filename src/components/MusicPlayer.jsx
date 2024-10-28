@@ -13,29 +13,31 @@ const playlist = [
     id: 2, 
     title: 'Special Song', 
     artist: 'Special for you',
-    src: '/1.mp3' 
+    src: '/3.mp3' 
   },
 ];
 
 function MusicPlayer() {
   const [currentSong, setCurrentSong] = useState(playlist[0]);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true); // Set initial state to true
   const [isVisible, setIsVisible] = useState(true);
   const [progress, setProgress] = useState(0);
-  const [hasInteracted, setHasInteracted] = useState(false);
+  const [hasInteracted, setHasInteracted] = useState(true); // Set initial state to true
+  const [isLoaded, setIsLoaded] = useState(false);
   const audioRef = useRef(null);
 
   // Load play state from localStorage
   useEffect(() => {
     const savedPlayState = localStorage.getItem('musicPlayerState');
     if (savedPlayState) {
-      const { isPlaying: savedIsPlaying, songId } = JSON.parse(savedPlayState);
-      setIsPlaying(savedIsPlaying);
+      const { songId } = JSON.parse(savedPlayState);
       const savedSong = playlist.find(song => song.id === songId);
       if (savedSong) {
         setCurrentSong(savedSong);
       }
     }
+    // Always set isPlaying to true on load
+    setIsPlaying(true);
   }, []);
 
   // Save play state to localStorage
@@ -45,6 +47,26 @@ function MusicPlayer() {
       songId: currentSong.id
     }));
   }, [isPlaying, currentSong]);
+
+  useEffect(() => {
+    const loadAudio = async () => {
+      if (audioRef.current) {
+        try {
+          await audioRef.current.load();
+          setIsLoaded(true);
+          // Attempt to play immediately after loading
+          audioRef.current.play().catch(error => {
+            console.log('Autoplay prevented:', error);
+            setIsPlaying(false);
+          });
+        } catch (error) {
+          console.error('Error loading audio:', error);
+        }
+      }
+    };
+
+    loadAudio();
+  }, []);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -65,8 +87,8 @@ function MusicPlayer() {
     audio.addEventListener('timeupdate', updateProgress);
     audio.addEventListener('ended', handleEnded);
 
-    // Handle autoplay based on saved state
-    if (isPlaying && hasInteracted) {
+    // Always try to play when component mounts or song changes
+    if (isPlaying) {
       audio.play().catch(error => {
         console.log('Autoplay prevented:', error);
         setIsPlaying(false);
@@ -77,13 +99,9 @@ function MusicPlayer() {
       audio.removeEventListener('timeupdate', updateProgress);
       audio.removeEventListener('ended', handleEnded);
     };
-  }, [currentSong, isPlaying, hasInteracted]);
+  }, [currentSong, isPlaying]);
 
   const togglePlay = () => {
-    if (!hasInteracted) {
-      setHasInteracted(true);
-    }
-
     if (isPlaying) {
       audioRef.current.pause();
     } else {
@@ -95,10 +113,6 @@ function MusicPlayer() {
   };
 
   const handleProgressClick = (e) => {
-    if (!hasInteracted) {
-      setHasInteracted(true);
-    }
-
     const bounds = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - bounds.left;
     const width = bounds.width;
@@ -107,10 +121,6 @@ function MusicPlayer() {
   };
 
   const handleSongChange = (e) => {
-    if (!hasInteracted) {
-      setHasInteracted(true);
-    }
-
     const song = playlist[e.target.value];
     setCurrentSong(song);
     setIsPlaying(true);

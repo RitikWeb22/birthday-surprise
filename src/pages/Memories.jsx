@@ -2,98 +2,59 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { memories } from '../data/memories';
 import { memoryImages } from '../data/images';
+import { IoChevronBack, IoChevronForward, IoCalendar, IoHeart, IoExpand, IoClose } from 'react-icons/io5';
 
 function Memories() {
   const [currentPage, setCurrentPage] = useState(0);
   const [direction, setDirection] = useState(0);
-  const [touchStart, setTouchStart] = useState(null);
+  const [showFullImage, setShowFullImage] = useState(false);
 
   const currentMemory = memories[currentPage];
   const currentImage = memoryImages[currentPage];
 
-  useEffect(() => {
-    localStorage.setItem('currentMemoryPage', currentPage);
-  }, [currentPage]);
-
-  useEffect(() => {
-    const savedPage = localStorage.getItem('currentMemoryPage');
-    if (savedPage) {
-      setCurrentPage(parseInt(savedPage));
-    }
-  }, []);
-
-  const flipPage = (newDirection) => {
-    setDirection(newDirection);
-    setCurrentPage((prevPage) => {
-      const newPage = prevPage + newDirection;
-      return Math.max(0, Math.min(newPage, memories.length - 1));
-    });
-  };
-
-  const handleTouchStart = (e) => {
-    setTouchStart(e.touches[0].clientX);
-  };
-
-  const handleTouchEnd = (e) => {
-    if (!touchStart) return;
-    
-    const touchEnd = e.changedTouches[0].clientX;
-    const diff = touchStart - touchEnd;
-
-    if (Math.abs(diff) > 50) {
-      if (diff > 0 && currentPage < memories.length - 1) {
-        flipPage(1);
-      } else if (diff < 0 && currentPage > 0) {
-        flipPage(-1);
-      }
-    }
-    setTouchStart(null);
-  };
-
   const variants = {
     enter: (direction) => ({
-      x: direction > 0 ? 300 : -300,
+      x: direction > 0 ? 1000 : -1000,
       opacity: 0,
-      scale: 0.9
     }),
     center: {
+      zIndex: 1,
       x: 0,
       opacity: 1,
-      scale: 1
     },
     exit: (direction) => ({
-      x: direction < 0 ? 300 : -300,
+      zIndex: 0,
+      x: direction < 0 ? 1000 : -1000,
       opacity: 0,
-      scale: 0.9
-    })
+    }),
+  };
+
+  const swipeConfidenceThreshold = 10000;
+  const swipePower = (offset, velocity) => {
+    return Math.abs(offset) * velocity;
+  };
+
+  const paginate = (newDirection) => {
+    if (
+      (currentPage === 0 && newDirection === -1) ||
+      (currentPage === memories.length - 1 && newDirection === 1)
+    )
+      return;
+
+    setDirection(newDirection);
+    setCurrentPage(currentPage + newDirection);
   };
 
   return (
-    <motion.div
+    <motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.4 }}
-      className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 pt-16 md:pt-24 pb-12 px-4"
+      className="min-h-screen pt-16 px-4 md:px-8 bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50"
     >
-      <div className="container mx-auto max-w-7xl">
-        <motion.h1
-          className="text-4xl sm:text-5xl md:text-6xl font-bold text-center mb-12 md:mb-16"
-          initial={{ y: -30, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5, type: "spring" }}
-        >
-          <span className="bg-gradient-to-r from-violet-400 via-fuchsia-300 to-violet-400 bg-clip-text text-transparent">
-            Our Cherished Memories
-          </span>
-        </motion.h1>
-
-        <div 
-          className="relative h-[550px] sm:h-[650px] md:h-[750px]"
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-        >
-          <AnimatePresence initial={false} custom={direction} mode="wait">
+      <div className="max-w-7xl mx-auto">
+        <div className="relative min-h-[600px] md:h-[80vh] w-full">
+          <AnimatePresence initial={false} custom={direction}>
             <motion.div
               key={currentPage}
               custom={direction}
@@ -103,71 +64,110 @@ function Memories() {
               exit="exit"
               transition={{
                 x: { type: "spring", stiffness: 300, damping: 30 },
-                opacity: { duration: 0.3 },
-                scale: { duration: 0.3 }
+                opacity: { duration: 0.2 }
+              }}
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={1}
+              onDragEnd={(e, { offset, velocity }) => {
+                const swipe = swipePower(offset.x, velocity.x);
+
+                if (swipe < -swipeConfidenceThreshold) {
+                  paginate(1);
+                } else if (swipe > swipeConfidenceThreshold) {
+                  paginate(-1);
+                }
               }}
               className="absolute w-full h-full"
             >
-              <div className="bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden h-full border border-white/20">
-                <div className="grid grid-cols-1 md:grid-cols-2 h-full">
-                  <div className="relative h-72 sm:h-80 md:h-full">
-                    <motion.img
-                      src={currentImage.src}
-                      alt={currentImage.alt}
-                      className="absolute inset-0 w-full h-full object-cover"
-                      initial={{ scale: 1.2, opacity: 0.8 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ duration: 0.6 }}
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-                    <motion.div
-                      className="absolute bottom-6 left-6 right-6"
-                      initial={{ y: 20, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      transition={{ duration: 0.4, delay: 0.2 }}
-                    >
-                      <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3 text-shadow-lg">
-                        {currentMemory.title}
-                      </h2>
-                      <p className="text-white/90 text-lg">{currentMemory.date}</p>
-                    </motion.div>
+              <div className="w-full h-full flex flex-col lg:grid lg:grid-cols-2 gap-6 p-4 md:p-6">
+                {/* Image Section - Now visible on all screens */}
+                <motion.div 
+                  className="relative h-[300px] md:h-[400px] lg:h-full w-full rounded-3xl md:rounded-2xl group cursor-pointer"
+                  onClick={() => setShowFullImage(true)}
+                >
+                  <motion.img
+                    src={currentImage.src}
+                    alt={currentImage.alt}
+                    className="w-full h-full object-cover"
+                    initial={{ scale: 1.2 }}
+                    animate={{ scale: 1 }}
+                    transition={{ duration: 0.8 }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="absolute bottom-6 left-6 right-6 text-white">
+                      <IoExpand className="text-3xl mb-2" />
+                      <p className="text-sm">Click to expand</p>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Content Section */}
+                <div className="bg-white/80 backdrop-blur-lg rounded-3xl p-6 md:p-8 flex flex-col flex-grow">
+                  <div className="flex items-center space-x-4 mb-6">
+                    <div className="bg-purple-100 p-3 rounded-2xl">
+                      <IoCalendar className="text-purple-600 text-xl" />
+                    </div>
+                    <div>
+                      <h3 className="text-gray-600 font-medium">Date</h3>
+                      <p className="text-gray-900">{currentMemory.date}</p>
+                    </div>
                   </div>
 
-                  <div className="p-8 sm:p-10 flex flex-col justify-between bg-gradient-to-br from-white/5 to-transparent">
-                    <motion.div
-                      initial={{ y: 20, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      transition={{ duration: 0.4, delay: 0.3 }}
-                      className="space-y-8"
-                    >
-                      <p className="text-xl sm:text-2xl text-gray-200 leading-relaxed">
-                        {currentMemory.description}
-                      </p>
-                      <div className="w-24 h-1 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full" />
-                      <p className="text-2xl sm:text-3xl italic text-violet-300">
+                  <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 md:mb-6 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                    {currentMemory.title}
+                  </h2>
+
+                  <div className="prose prose-sm md:prose-base lg:prose-lg text-gray-600 mb-6 overflow-y-auto max-h-[200px] md:max-h-none">
+                    {currentMemory.description}
+                  </div>
+
+                  <div className="mt-auto pt-4">
+                    <div className="flex items-center space-x-3 mb-6">
+                      <IoHeart className="text-pink-500 text-xl md:text-2xl flex-shrink-0" />
+                      <p className="text-lg md:text-xl italic text-purple-600">
                         {currentMemory.message}
                       </p>
-                    </motion.div>
+                    </div>
 
-                    <div className="flex justify-between items-center mt-8 sm:mt-10">
+                    {/* Navigation Controls */}
+                    <div className="flex items-center justify-between">
                       <motion.button
-                        whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.15)" }}
+                        whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => flipPage(-1)}
+                        onClick={() => paginate(-1)}
                         disabled={currentPage === 0}
-                        className="px-6 sm:px-8 py-3 sm:py-4 bg-white/10 text-white rounded-full disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20 border border-white/20"
+                        className="p-3 md:p-4 rounded-2xl bg-purple-100 text-purple-600 disabled:opacity-50"
                       >
-                        Previous
+                        <IoChevronBack className="text-xl md:text-2xl" />
                       </motion.button>
+
+                      <div className="flex space-x-2">
+                        {memories.map((_, index) => (
+                          <motion.button
+                            key={index}
+                            onClick={() => {
+                              setDirection(index > currentPage ? 1 : -1);
+                              setCurrentPage(index);
+                            }}
+                            className={`w-2 h-2 md:w-3 md:h-3 rounded-full transition-colors ${
+                              currentPage === index 
+                                ? 'bg-purple-600' 
+                                : 'bg-purple-200'
+                            }`}
+                            whileHover={{ scale: 1.2 }}
+                          />
+                        ))}
+                      </div>
+
                       <motion.button
-                        whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.15)" }}
+                        whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => flipPage(1)}
-                        disabled={currentPage >= memories.length - 1}
-                        className="px-6 sm:px-8 py-3 sm:py-4 bg-white/10 text-white rounded-full disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20 border border-white/20"
+                        onClick={() => paginate(1)}
+                        disabled={currentPage === memories.length - 1}
+                        className="p-3 md:p-4 rounded-2xl bg-purple-100 text-purple-600 disabled:opacity-50"
                       >
-                        Next
+                        <IoChevronForward className="text-xl md:text-2xl" />
                       </motion.button>
                     </div>
                   </div>
@@ -177,6 +177,37 @@ function Memories() {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Fullscreen Image Modal */}
+      <AnimatePresence>
+        {showFullImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md p-4 flex items-center justify-center"
+            onClick={() => setShowFullImage(false)}
+          >
+            <motion.button
+              className="absolute top-4 right-4 text-white bg-white/10 p-2 rounded-full"
+              onClick={() => setShowFullImage(false)}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <IoClose size={24} />
+            </motion.button>
+            <motion.img
+              src={currentImage.src}
+              alt={currentImage.alt}
+              className="max-w-full max-h-[90vh] object-contain rounded-lg"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 200, damping: 30 }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

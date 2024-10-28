@@ -1,24 +1,29 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Header from './components/Header';
-import Home from './pages/Home';
-import Memories from './pages/Memories';
-import Gallery from './pages/Gallery';
+import LoadingSpinner from './components/LoadingSpinner';
 import MusicPlayer from './components/MusicPlayer';
-import Footer from './components/Footer';
+import CustomCursor from './components/CustomCursor';
+
+// Lazy load pages
+const Home = lazy(() => import('./pages/Home'));
+const Memories = lazy(() => import('./pages/Memories'));
+const Gallery = lazy(() => import('./pages/Gallery'));
 
 function App() {
   return (
     <Router>
       <div className="min-h-screen bg-gradient-to-b from-pink-100 to-purple-200">
+        <CustomCursor />
         <Header />
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/memories" element={<Memories />} />
-          <Route path="/gallery" element={<Gallery />} />
-        </Routes>
+        <Suspense fallback={<LoadingSpinner />}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/memories" element={<Memories />} />
+            <Route path="/gallery" element={<Gallery />} />
+          </Routes>
+        </Suspense>
         <MusicPlayer />
-
       </div>
     </Router>
   );

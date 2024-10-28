@@ -3,14 +3,7 @@ export const homeImages = [
     src: "/anshu/1.jpeg",
     alt: "Birthday memory 1"
   },
-  {
-    src: "/anshu/2.jpeg",
-    alt: "Birthday memory 1"
-  },
-  {
-    src: "/anshu/3.jpeg",
-    alt: "Birthday memory 1"
-  },
+
  
 ];
 
