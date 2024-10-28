@@ -136,14 +136,7 @@ function Home() {
               >
                 Celebrate! 🎉
               </motion.button>
-              <motion.a
-                href="/gallery"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="px-8 py-4 bg-white/80 backdrop-blur-sm text-purple-600 rounded-full text-lg font-semibold shadow-lg hover:shadow-xl transition-shadow border border-purple-200"
-              >
-                View Gallery 📸
-              </motion.a>
+              
             </motion.div>
           </motion.div>
         </div>
